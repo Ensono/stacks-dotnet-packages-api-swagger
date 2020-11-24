@@ -1,16 +1,15 @@
-name: $(build.SourceBranchName)-init
+name: $(Build.SourceBranchName)-init
 
 variables:
   # Versioning
   - name: Version.Major
     value: 0
   - name: Version.Minor
-    value: 1
+    value: 2
   - name: Version.Revision
     value: $[counter(variables['Version.Minor'], 0)]
   - name: Version.Number
     value: $(Version.Major).$(Version.Minor).$(Version.Revision)
-
   # DevOps Scripts Package Info
   - name: DevOps.File
     value: scripts-1.1.0-master.tar.gz
@@ -20,7 +19,15 @@ variables:
     value: amidostacksuksprod
   - name: DevOps.RG
     value: amido-stacks-rg-uks-prod
-
+  # SelfConfig
+  - name: self_repo
+    value: stacks-dotnet-packages-api-swagger
+  - name: self_repo_dir
+    value: "$(Agent.BuildDirectory)/s/$(self_repo)"
+  - name: self_pipeline_repo
+    value: "$(Agent.BuildDirectory)/s/stacks-pipeline-templates"
+  - name: self_pipeline_scripts_dir
+    value: "$(self_pipeline_repo)/scripts"
   # Path specific for this package, change accordingly
   - name: Package.Feed
     value: "Stacks"
@@ -34,15 +41,22 @@ variables:
     value: "$(Package.Path).Tests"
   - name: BuildPipeline.Path
     value: "build/azDevOps/packages-amido-stacks-api-swagger.yml"
+  # Yamllint
+  - name: yamllint_config_file
+    value: "${{ variables.self_repo_dir }}/yamllint.conf"
+  - name: yamllint_scan_directory
+    value: "."
 
+# Trigger paths specific for this package, change accordingly
 trigger:
   branches:
     include:
-      - main
-      - feature/*
-      - bug*
+    - 'main'
+  paths:
+    include:
+    - '*'
 
-# Only build PRs that are going into Master
+# Only build PRs into Main
 pr:
   branches:
     include:
@@ -53,24 +67,47 @@ resources:
     - repository: templates
       type: github
       name: amido/stacks-pipeline-templates
-      ref: refs/tags/v1.4.17
+      ref: refs/tags/v1.4.22
       endpoint: amidostacks # Created when you set up the connection to GitHub from Azure DevOps
+  containers:
+    - container: k8s_deploy
+      image: amidostacks/ci-k8s:0.0.11
 
 stages:
-  - stage: BuildandDeploy
+  - stage: BuildAndDeploy
     variables:
       - group: amido-stacks-infra-credentials-nonprod
     jobs:
+      - job: Validation
+        pool:
+          vmImage: "ubuntu-18.04"
+        steps:
+          - checkout: self
+
+          - checkout: templates
+
+          # Update Build Number
+          - template: azDevOps/azure/templates/v2/steps/build-updatebuildnumber-dotnet.yml@templates
+            parameters:
+              sourcebranch_name: "$(Build.SourceBranchName)"
+              raw_version_number: "$(Version.Number)"
+
+          # Validates all YAML files in the repo to check they adhere to standards
+          - template: azDevOps/azure/templates/v3/steps/build/test-validate-yaml.yml@templates
+            parameters:
+              pipeline_scripts_directory: "${{ variables.self_pipeline_scripts_dir }}"
+              container: "k8s_deploy"
+              yamllint_config_file: "${{ variables.yamllint_config_file }}"
+              yamllint_scan_directory: "${{ variables.yamllint_scan_directory }}"
+
       - job: BuildDotNet
+        dependsOn: Validation
         pool:
           vmImage: "windows-2019"
         continueOnError: false
         steps:
           - template: azDevOps/azure/templates/v2/steps/build-dotnet-package.yml@templates
             parameters:
-              # Version Config
-              sourcebranch_name: "$(Build.SourceBranchName)"
-              raw_version_number: "$(Version.Number)"
               # Build Config
               test_path: "$(Test.Path)"
               package_path: "$(Package.Path)"
