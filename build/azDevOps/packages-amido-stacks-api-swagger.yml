@@ -51,7 +51,7 @@ variables:
 trigger:
   branches:
     include:
-    - 'main'
+      - main
   paths:
     include:
     - '*'
