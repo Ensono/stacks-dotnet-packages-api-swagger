@@ -13,14 +13,14 @@ namespace Amido.Stacks.API.Swagger.Filters
 
         public string BasePath { get; }
 
-        public void Apply(OpenApiDocument openApiDocument, DocumentFilterContext context)
+        public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
         {
             if (string.IsNullOrWhiteSpace(BasePath))
             {
                 return;
             }
 
-            openApiDocument.Servers = new List<OpenApiServer>
+            swaggerDoc.Servers = new List<OpenApiServer>
             {
                 new OpenApiServer {Url = BasePath}
             };
