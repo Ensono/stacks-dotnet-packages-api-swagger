@@ -33,8 +33,6 @@ variables:
     value: "Stacks"
   - name: Package.Public
     value: true
-  - name: Package.nuget_service_connection
-    value: NuGetAmidoStacksServiceConnection
   - name: Package.Path
     value: "src/Amido.Stacks.API.Swagger"
   - name: Test.Path
@@ -67,7 +65,7 @@ resources:
     - repository: templates
       type: github
       name: amido/stacks-pipeline-templates
-      ref: 6dfd82e3fec86b676f209c6c804d59ea43384cfe
+      ref: refs/tags/v1.4.25
       endpoint: amidostacks # Created when you set up the connection to GitHub from Azure DevOps
   containers:
     - container: k8s_deploy
@@ -117,8 +115,7 @@ stages:
               publish_symbols: true
               publish_public: "$(Package.Public)"
               # Nuget
-              use_nuget_service_connection: true
-              nuget_service_connection: "$(Package.nuget_service_connection)"
+              use_nuget_service_connection: false
               # Secret Config
               cosmosdb_secret: false
               # .NET Core version variables
