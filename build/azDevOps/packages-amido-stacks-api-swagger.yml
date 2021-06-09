@@ -67,7 +67,7 @@ resources:
     - repository: templates
       type: github
       name: amido/stacks-pipeline-templates
-      ref: refs/tags/v1.4.23
+      ref: 6dfd82e3fec86b676f209c6c804d59ea43384cfe
       endpoint: amidostacks # Created when you set up the connection to GitHub from Azure DevOps
   containers:
     - container: k8s_deploy
@@ -116,6 +116,8 @@ stages:
               package_feed: "$(Package.Feed)"
               publish_symbols: true
               publish_public: "$(Package.Public)"
+              # Nuget
+              use_nuget_service_connection: true
               nuget_service_connection: "$(Package.nuget_service_connection)"
               # Secret Config
               cosmosdb_secret: false
